@@ -97,7 +97,18 @@ export default function App() {
         })
       });
 
-      const data = await res.json();
+      let data: any = {};
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { error: res.status === 404 ? 'API route not found on server.' : `Server error (${res.status}).` };
+        }
+      }
 
       if (!res.ok) {
         setAuthError(data.error || 'Authentication failed. Please check your credentials.');
@@ -430,6 +441,8 @@ export default function App() {
                     className="w-full px-4 py-2.5 bg-[#E4DECE]/20 border border-[#CCCFDC] rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#021152] transition"
                   />
                 </div>
+
+
 
 
 
