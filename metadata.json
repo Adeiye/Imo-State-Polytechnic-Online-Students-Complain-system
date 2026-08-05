@@ -1,0 +1,6 @@
+{
+  "name": "Online Students' Complaint System",
+  "description": "Institutional complaint management platform for Imo State Polytechnic, Omuma with auto-reply engine and admin audit history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,83 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --color-navy: #021152;
+  --color-parchment: #E4DECE;
+  --color-charcoal: #141414;
+  --color-slate-border: #CCCFDC;
+  --color-white: #FFFFFF;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #E4DECE;
+  color: #141414;
+}
+
+/* Custom Palette Utilities */
+.bg-navy { background-color: #021152; }
+.text-navy { color: #021152; }
+.border-navy { border-color: #021152; }
+.hover\:bg-navy-dark:hover { background-color: #010b38; }
+
+.bg-parchment { background-color: #E4DECE; }
+.text-parchment { color: #E4DECE; }
+.border-parchment { border-color: #E4DECE; }
+
+.bg-charcoal { background-color: #141414; }
+.text-charcoal { color: #141414; }
+
+.bg-slate-border { background-color: #CCCFDC; }
+.border-slate-border { border-color: #CCCFDC; }
+.text-slate-border { color: #CCCFDC; }
+
+/* Geometric Balance Background Pattern using Palette */
+.geometric-bg {
+  background-color: #E4DECE;
+  background-image: 
+    linear-gradient(to right, rgba(204, 207, 220, 0.7) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(204, 207, 220, 0.7) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Geometric Card Accents */
+.geom-card {
+  background: #ffffff;
+  border: 1px solid #CCCFDC;
+  box-shadow: 0 4px 14px -2px rgba(2, 17, 82, 0.08);
+  position: relative;
+}
+
+.geom-card-dark {
+  background: #021152;
+  border: 1px solid rgba(204, 207, 220, 0.3);
+  box-shadow: 0 8px 24px -4px rgba(2, 17, 82, 0.4);
+  color: #ffffff;
+}
+
+.geom-accent-blue {
+  border-top: 4px solid #021152;
+}
+
+.geom-accent-emerald {
+  border-top: 4px solid #16a34a;
+}
+
+.geom-accent-indigo {
+  border-top: 4px solid #021152;
+}
+
+.geom-badge {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
