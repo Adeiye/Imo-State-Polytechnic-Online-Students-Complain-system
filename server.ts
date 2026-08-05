@@ -1,7 +1,6 @@
 import express from "express";
 import fs from "fs";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 
 const app = express();
 const PORT = 3000;
@@ -725,125 +724,135 @@ app.get("/api/students", (req, res) => {
 
 // AUTH Login
 app.post(["/api/auth/login", "/auth/login", "/login.php", "/api/login", "/login"], (req, res) => {
-  const body = req.body || {};
-  const rawId = (body.identifier || body.email || body.reg_number || body.matric_number || body.username || '').toString().trim();
-  const loginId = rawId.toLowerCase();
-  const loginPass = (body.password || '').toString().trim();
-  const targetRole = (body.role || 'student').toString().trim().toLowerCase();
+  try {
+    const body = req.body || {};
+    const rawId = (body.identifier || body.email || body.reg_number || body.matric_number || body.username || '').toString().trim();
+    const loginId = rawId.toLowerCase();
+    const loginPass = (body.password || '').toString().trim();
+    const targetRole = (body.role || 'student').toString().trim().toLowerCase();
 
-  // Approved admin credentials check
-  const isAdminRequest = targetRole === 'admin' || 
-    ['admin001', 'admin', 'admin@imopoly.edu.ng', 'admin001@imopoly.edu.ng', 'administrator'].includes(loginId) ||
-    loginId.includes('admin');
+    // Approved admin credentials check
+    const isAdminRequest = targetRole === 'admin' || 
+      ['admin001', 'admin', 'admin@imopoly.edu.ng', 'admin001@imopoly.edu.ng', 'administrator'].includes(loginId) ||
+      loginId.includes('admin');
 
-  if (isAdminRequest) {
-    const adminUser = users.find(u => u.role === 'admin') || {
-      user_id: 99,
-      full_name: 'Polytechnic Administrator',
-      reg_number: 'admin001',
-      email: 'admin001@imopoly.edu.ng',
-      password: 'admin001',
-      role: 'admin',
-      created_at: '2026-01-01 08:00:00'
-    };
+    if (isAdminRequest) {
+      const adminUser = users.find(u => u.role === 'admin') || {
+        user_id: 99,
+        full_name: 'Polytechnic Administrator',
+        reg_number: 'admin001',
+        email: 'admin001@imopoly.edu.ng',
+        password: 'admin001',
+        role: 'admin',
+        created_at: '2026-01-01 08:00:00'
+      };
+      return res.json({
+        user_id: adminUser.user_id,
+        full_name: adminUser.full_name,
+        reg_number: adminUser.reg_number,
+        email: adminUser.email,
+        role: 'admin'
+      });
+    }
+
+    if (!rawId) {
+      return res.status(400).json({ error: "Please enter your Matric / Reg Number or Email address." });
+    }
+
+    // Find student user by email, reg_number, or full_name (case-insensitive substring or exact match)
+    let user = users.find(u => 
+      u.email.toLowerCase() === loginId || 
+      u.reg_number.toLowerCase() === loginId ||
+      u.full_name.toLowerCase() === loginId ||
+      (loginId.length >= 4 && u.reg_number.toLowerCase().includes(loginId))
+    );
+
+    // If user not found (e.g. serverless instance restart or custom ID), auto-create the student record instantly
+    if (!user) {
+      const formattedReg = rawId.includes('/') ? rawId.toUpperCase() : `IMOPOLY/ND/2026/${rawId.toUpperCase().replace(/[^A-Z0-9]/g, '') || Math.floor(1000 + Math.random() * 9000)}`;
+      const formattedEmail = rawId.includes('@') ? rawId.toLowerCase() : `${rawId.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.imopoly.edu.ng`;
+      const formattedName = rawId.includes('@') ? rawId.split('@')[0].replace(/[._]/g, ' ').toUpperCase() : `Student (${rawId.toUpperCase()})`;
+
+      user = {
+        user_id: users.length + 100,
+        full_name: formattedName,
+        reg_number: formattedReg,
+        email: formattedEmail,
+        password: loginPass || 'password123',
+        role: 'student',
+        created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      };
+
+      users.push(user);
+      saveStore();
+    }
+
     return res.json({
-      user_id: adminUser.user_id,
-      full_name: adminUser.full_name,
-      reg_number: adminUser.reg_number,
-      email: adminUser.email,
-      role: 'admin'
+      user_id: user.user_id,
+      full_name: user.full_name,
+      reg_number: user.reg_number,
+      email: user.email,
+      role: 'student'
     });
+  } catch (err: any) {
+    console.error("[Login Error]", err);
+    return res.status(500).json({ error: "Authentication failed on server: " + (err?.message || "Unknown error") });
   }
-
-  if (!rawId) {
-    return res.status(400).json({ error: "Please enter your Matric / Reg Number or Email address." });
-  }
-
-  // Find student user by email, reg_number, or full_name (case-insensitive substring or exact match)
-  let user = users.find(u => 
-    u.email.toLowerCase() === loginId || 
-    u.reg_number.toLowerCase() === loginId ||
-    u.full_name.toLowerCase() === loginId ||
-    (loginId.length >= 4 && u.reg_number.toLowerCase().includes(loginId))
-  );
-
-  // If user not found (e.g. serverless instance restart or custom ID), auto-create the student record instantly
-  if (!user) {
-    const formattedReg = rawId.includes('/') ? rawId.toUpperCase() : `IMOPOLY/ND/2026/${rawId.toUpperCase().replace(/[^A-Z0-9]/g, '') || Math.floor(1000 + Math.random() * 9000)}`;
-    const formattedEmail = rawId.includes('@') ? rawId.toLowerCase() : `${rawId.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.imopoly.edu.ng`;
-    const formattedName = rawId.includes('@') ? rawId.split('@')[0].replace(/[._]/g, ' ').toUpperCase() : `Student (${rawId.toUpperCase()})`;
-
-    user = {
-      user_id: users.length + 100,
-      full_name: formattedName,
-      reg_number: formattedReg,
-      email: formattedEmail,
-      password: loginPass || 'password123',
-      role: 'student',
-      created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
-    };
-
-    users.push(user);
-    saveStore();
-  }
-
-  return res.json({
-    user_id: user.user_id,
-    full_name: user.full_name,
-    reg_number: user.reg_number,
-    email: user.email,
-    role: 'student'
-  });
 });
 
 // AUTH Register
 app.post(["/api/auth/register", "/auth/register", "/register.php", "/api/register", "/register"], (req, res) => {
-  const body = req.body || {};
-  const cleanName = (body.full_name || body.name || '').toString().trim();
-  const cleanReg = (body.reg_number || body.matric_number || '').toString().trim().toUpperCase();
-  const cleanEmail = (body.email || '').toString().trim().toLowerCase();
-  const cleanPass = (body.password || 'password123').toString().trim();
+  try {
+    const body = req.body || {};
+    const cleanName = (body.full_name || body.name || '').toString().trim();
+    const cleanReg = (body.reg_number || body.matric_number || '').toString().trim().toUpperCase();
+    const cleanEmail = (body.email || '').toString().trim().toLowerCase();
+    const cleanPass = (body.password || 'password123').toString().trim();
 
-  if (!cleanName || (!cleanReg && !cleanEmail)) {
-    return res.status(400).json({ error: "Full Name and Reg Number or Email are required." });
-  }
+    if (!cleanName || (!cleanReg && !cleanEmail)) {
+      return res.status(400).json({ error: "Full Name and Reg Number or Email are required." });
+    }
 
-  let existing = users.find(u => 
-    (cleanReg && u.reg_number.toLowerCase() === cleanReg.toLowerCase()) || 
-    (cleanEmail && u.email.toLowerCase() === cleanEmail)
-  );
+    let existing = users.find(u => 
+      (cleanReg && u.reg_number.toLowerCase() === cleanReg.toLowerCase()) || 
+      (cleanEmail && u.email.toLowerCase() === cleanEmail)
+    );
 
-  if (existing) {
-    return res.json({
-      user_id: existing.user_id,
-      full_name: existing.full_name,
-      reg_number: existing.reg_number,
-      email: existing.email,
-      role: existing.role
+    if (existing) {
+      return res.json({
+        user_id: existing.user_id,
+        full_name: existing.full_name,
+        reg_number: existing.reg_number,
+        email: existing.email,
+        role: existing.role
+      });
+    }
+
+    const newId = users.length + 1;
+    const newUser: UserDB = {
+      user_id: newId,
+      full_name: cleanName,
+      reg_number: cleanReg || `IMOPOLY/ND/2026/${Math.floor(1000 + Math.random() * 9000)}`,
+      email: cleanEmail || `${cleanName.toLowerCase().replace(/[^a-z]/g, '')}@student.imopoly.edu.ng`,
+      password: cleanPass,
+      role: 'student',
+      created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+
+    users.push(newUser);
+    saveStore();
+
+    res.status(201).json({
+      user_id: newUser.user_id,
+      full_name: newUser.full_name,
+      reg_number: newUser.reg_number,
+      email: newUser.email,
+      role: newUser.role
     });
+  } catch (err: any) {
+    console.error("[Register Error]", err);
+    return res.status(500).json({ error: "Registration failed on server: " + (err?.message || "Unknown error") });
   }
-
-  const newId = users.length + 1;
-  const newUser: UserDB = {
-    user_id: newId,
-    full_name: cleanName,
-    reg_number: cleanReg || `IMOPOLY/ND/2026/${Math.floor(1000 + Math.random() * 9000)}`,
-    email: cleanEmail || `${cleanName.toLowerCase().replace(/[^a-z]/g, '')}@student.imopoly.edu.ng`,
-    password: cleanPass,
-    role: 'student',
-    created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
-  };
-
-  users.push(newUser);
-  saveStore();
-
-  res.status(201).json({
-    user_id: newUser.user_id,
-    full_name: newUser.full_name,
-    reg_number: newUser.reg_number,
-    email: newUser.email,
-    role: newUser.role
-  });
 });
 
 // AUTH Google Sign-In
@@ -912,12 +921,19 @@ app.post(["/api/auth/change-password", "/auth/change-password"], (req, res) => {
 // SERVE PUBLIC STATIC ASSETS (Logos, Images, etc)
 app.use(express.static(path.join(process.cwd(), 'public')));
 
+// GLOBAL ERROR HANDLER (Catches serverless runtime exceptions)
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("[Server Error]", err);
+  res.status(500).json({ error: err?.message || "Internal server error occurred." });
+});
+
 // Export default app for Vercel serverless integration
 export default app;
 
 // VITE MIDDLEWARE SETUP FOR DEV & LOCAL PROD
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true, hmr: false, ws: false as const },
       appType: "spa",
